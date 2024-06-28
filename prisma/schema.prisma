@@ -1,0 +1,110 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model Annotation {
+    id                    Int                    @id
+    completedById         Int?
+    result                Json?                  @db.Json
+    reviews               Json?                  @db.Json
+    wasCancelled          Boolean?
+    groundTruth           Boolean?
+    createdAt             DateTime               @db.Timestamp(6)
+    updatedAt             DateTime               @db.Timestamp(6)
+    draftCreatedAt        DateTime?              @db.Timestamp(6)
+    leadTime              Float?
+    prediction            Json?                  @db.Json
+    resultCount           Int?
+    uniqueId              String?                @db.Uuid
+    importId              Int?
+    lastAction            String?                @db.VarChar(255)
+    taskId                Int?
+    projectId             Int?
+    updatedById           Int?
+    parentPredictionId    Int?
+    parentAnnotationId    Int?
+    lastCreatedById       Int?
+    completedBy           User?                  @relation("annotationsCompletedBy", fields: [completedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    task                  Task?                  @relation(fields: [taskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    updatedBy             User?                  @relation("annotationsUpdatedBy", fields: [updatedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    draftAnnotations      DraftAnnotation[]
+    predictionAnnotations PredictionAnnotation[]
+    BoundingBoxes         BoundingBoxes[]
+}
+
+model DraftAnnotation {
+    draftId      Int
+    annotationId Int
+    annotation   Annotation @relation(fields: [annotationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    draft        Draft      @relation(fields: [draftId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+    @@id([draftId, annotationId])
+}
+
+model Draft {
+    id               Int               @id
+    draftAnnotations DraftAnnotation[]
+}
+
+model PredictionAnnotation {
+    predictionId Int
+    annotationId Int
+    annotation   Annotation @relation(fields: [annotationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    prediction   Prediction @relation(fields: [predictionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+    @@id([predictionId, annotationId])
+}
+
+model Prediction {
+    id                    Int                    @id
+    predictionAnnotations PredictionAnnotation[]
+}
+
+model Task {
+    id                     Int          @id
+    agreement              Float?
+    data                   Json?        @db.Json
+    meta                   Json?        @db.Json
+    createdAt              DateTime     @db.Timestamp(6)
+    updatedAt              DateTime     @db.Timestamp(6)
+    innerId                Int?
+    totalAnnotations       Int?
+    cancelledAnnotations   Int?
+    totalPredictions       Int?
+    commentCount           Int?
+    unresolvedCommentCount Int?
+    lastCommentUpdatedAt   DateTime?    @db.Timestamp(6)
+    projectId              Int?
+    updatedById            Int?
+    commentAuthors         Json?        @db.Json
+    annotations            Annotation[]
+    updatedBy              User?        @relation(fields: [updatedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model User {
+    id                     Int          @id
+    email                  String       @db.VarChar(255)
+    firstName              String?      @db.VarChar(255)
+    lastName               String?      @db.VarChar(255)
+    annotationsCompletedBy Annotation[] @relation("annotationsCompletedBy")
+    annotationsUpdatedBy   Annotation[] @relation("annotationsUpdatedBy")
+    tasks                  Task[]
+}
+
+model BoundingBoxes {
+    id           Int        @id @default(autoincrement())
+    x            Float
+    y            Float
+    width        Float
+    height       Float
+    label        String
+    image        String
+    createdAt    DateTime   @db.Timestamp(6)
+    annotationId Int
+    annotation   Annotation @relation(fields: [annotationId], references: [id])
+}
